@@ -11,11 +11,5 @@
       "src": "/(.*)",
       "dest": "/server.js"
     }
-  ],
-  "projectSettings": {
-    "framework": "node",
-    "buildCommand": "npm install",
-    "outputDirectory": ".",
-    "devCommand": "npm run dev"
-  }
+  ]
 }
