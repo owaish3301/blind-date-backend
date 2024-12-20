@@ -14,7 +14,7 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
@@ -38,8 +38,6 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
 }));
-app.use(passport.initialize());
-app.use(passport.session());
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -48,9 +46,6 @@ app.use((req, res, next) => {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
-
-// Passport config
-require('./config/passport')(passport);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

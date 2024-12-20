@@ -2,8 +2,8 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const passport = require('passport');
 const CryptoJS = require("crypto-js");
+const auth = require('../middleware/auth');
 
 // Sign Up Route
 router.post('/signup', async (req, res) => {
@@ -22,8 +22,12 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create new user
-    user = new User({ name, email });
+    // Create new user without questionnaire data
+    user = new User({
+      name,
+      email,
+      questionnaire: { questionnaireCompleted: false } // Initialize with empty questionnaire
+    });
 
     // Hash password once for storage
     const salt = await bcrypt.genSalt(10);
@@ -79,43 +83,9 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-// Google OAuth Routes
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-
-router.get('/google/callback',
-  passport.authenticate('google', { 
-    failureRedirect: `${process.env.FRONTEND_URL}/signin`,
-    session: false
-  }),
-  (req, res) => {
-    try {
-      console.log('OAuth Callback - User:', req.user);
-      
-      if (!req.user || !req.user._id) {
-        console.error('Invalid user object in callback');
-        return res.redirect(`${process.env.FRONTEND_URL}/signin`);
-      }
-
-      const token = jwt.sign(
-        { id: req.user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
-      
-      console.log('Generated token for OAuth user');
-      res.redirect(`${process.env.FRONTEND_URL}/home?token=${token}`);
-    } catch (error) {
-      console.error('OAuth callback error:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/signin`);
-    }
-  }
-);
 
 // Add verify token route
 router.get('/verify', async (req, res) => {
-  console.log('Verify token request');
   try {
     const token = req.header('x-auth-token');
     if (!token) {
@@ -132,6 +102,36 @@ router.get('/verify', async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(401).json({ message: 'Token is not valid' });
+  }
+});
+
+// Add questionnaire route
+router.post('/questionnaire', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Validate required fields
+    const { gender, interestedIn } = req.body;
+    if (!gender || !interestedIn) {
+      return res.status(400).json({ 
+        message: 'Gender and interested in preferences are required' 
+      });
+    }
+
+    // Update questionnaire data
+    user.questionnaire = {
+      ...req.body,
+      questionnaireCompleted: true
+    };
+
+    await user.save();
+    res.json({ message: 'Questionnaire completed successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
