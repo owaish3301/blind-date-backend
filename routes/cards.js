@@ -55,24 +55,28 @@ router.get('/available', auth, async (req, res) => {
     }
 
     const userGender = user.questionnaire.gender;
-    let cards;
-
-    cards = await Card.find({ isActive: true });
+    const cards = await Card.find({ isActive: true });
 
     // Process cards before sending
-    const processedCards = cards.map(card => ({
-      _id: card._id,
-      code: userGender === 'Male' 
-        ? (card.maleScratch.scratchedBy?.equals(user._id) ? card.code : null)
-        : (card.femaleScratch.scratchedBy?.equals(user._id) ? card.code : null),
-      isLocked: userGender === 'Male'
-        ? (card.maleScratch.scratchedBy && !card.maleScratch.scratchedBy.equals(user._id))
-        : (card.femaleScratch.scratchedBy && !card.femaleScratch.scratchedBy.equals(user._id)),
-      canScratch: true, // Set this to true by default
-      isScratched: userGender === 'Male'
+    const processedCards = cards.map(card => {
+      const isScratchedByMe = userGender === 'Male' 
         ? card.maleScratch.scratchedBy?.equals(user._id)
-        : card.femaleScratch.scratchedBy?.equals(user._id)
-    }));
+        : card.femaleScratch.scratchedBy?.equals(user._id);
+
+      const isScratchedByOthers = userGender === 'Male'
+        ? card.maleScratch.scratchedBy && !card.maleScratch.scratchedBy.equals(user._id)
+        : card.femaleScratch.scratchedBy && !card.femaleScratch.scratchedBy.equals(user._id);
+
+      return {
+        _id: card._id,
+        code: isScratchedByMe ? card.code : null,
+        isLocked: isScratchedByOthers,
+        isScratched: isScratchedByMe,
+        scratchedAt: isScratchedByMe 
+          ? (userGender === 'Male' ? card.maleScratch.scratchedAt : card.femaleScratch.scratchedAt)
+          : null
+      };
+    });
 
     // Shuffle cards
     const shuffledCards = processedCards.sort(() => Math.random() - 0.5);
@@ -92,9 +96,18 @@ router.post('/scratch/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Check if user has completed questionnaire
+    if (!user.questionnaire?.gender) {
+      return res.status(400).json({ message: 'Please complete your profile first' });
+    }
+
     const card = await Card.findById(req.params.id);
     if (!card) {
       return res.status(404).json({ message: 'Card not found' });
+    }
+
+    if (!card.isActive) {
+      return res.status(400).json({ message: 'Card is not active' });
     }
 
     const userGender = user.questionnaire.gender;
@@ -103,7 +116,10 @@ router.post('/scratch/:id', auth, async (req, res) => {
 
     // Check if already scratched by this user
     if (card[scratchField].scratchedBy?.equals(user._id)) {
-      return res.status(400).json({ message: 'You have already scratched this card' });
+      return res.status(400).json({ 
+        message: 'You have already scratched this card',
+        code: card.code // Return code if already scratched
+      });
     }
 
     // Update scratch info
