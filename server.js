@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const passport = require('passport');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
@@ -14,8 +13,12 @@ connectDB();
 
 // Middleware
 app.use(express.json());
+
+// CORS configuration
 app.use(cors({
-  origin: ['https://blind-date-seven.vercel.app', 'http://localhost:5173'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://blind-date-seven.vercel.app'
+    : 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
@@ -29,15 +32,12 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI,
-    collectionName: 'sessions',
-    ttl: 24 * 60 * 60, // 1 day
-    autoRemove: 'native'
+    collectionName: 'sessions'
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
 
@@ -49,22 +49,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add these headers to your middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://blind-date-seven.vercel.app');
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-auth-token');
-  
-  // Handle OPTIONS method
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/cards', require('./routes/cards'));
 
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
