@@ -55,6 +55,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
 
+// Socket.IO setup
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -69,10 +70,17 @@ const io = new Server(server, {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
   socket.on('join', (userData) => {
     if (userData?.gender) {
+      console.log(`User joined ${userData.gender} room:`, socket.id);
       socket.join(userData.gender);
     }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
   });
 });
 
@@ -84,6 +92,7 @@ const emitCardUpdate = (cardId, gender, data) => {
     scratchedBy: data.scratchedBy.toString()
   };
   
+  console.log(`Emitting to ${gender} room:`, payload);
   io.to(gender).emit('cardUpdate', payload);
 };
 
