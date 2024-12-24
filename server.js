@@ -60,27 +60,23 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? 'https://blind-date-seven.vercel.app'
+      ? ['https://blind-date-seven.vercel.app', 'https://blind-date-backend.vercel.app']
       : 'http://localhost:5173',
     methods: ['GET', 'POST'],
     credentials: true
   },
-  path: '/socket.io' // Explicitly set the path
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000
 });
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
   socket.on('join', (userData) => {
     if (userData?.gender) {
-      console.log(`User joined ${userData.gender} room:`, socket.id);
       socket.join(userData.gender);
     }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
   });
 });
 
@@ -92,7 +88,6 @@ const emitCardUpdate = (cardId, gender, data) => {
     scratchedBy: data.scratchedBy.toString()
   };
   
-  console.log(`Emitting to ${gender} room:`, payload);
   io.to(gender).emit('cardUpdate', payload);
 };
 
