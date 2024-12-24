@@ -5,6 +5,8 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
 const path = require('path');
+const { Server } = require('socket.io');
+const http = require('http');
 
 const app = express();
 
@@ -53,9 +55,44 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
 
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? 'https://blind-date-seven.vercel.app'
+      : 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  path: '/socket.io' // Explicitly set the path
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  socket.on('join', (userData) => {
+    if (userData?.gender) {
+      socket.join(userData.gender);
+    }
+  });
+});
+
+// Update the card scratch route to emit updates
+const emitCardUpdate = (cardId, gender, data) => {
+  const payload = {
+    cardId: cardId.toString(),
+    isLocked: true,
+    scratchedBy: data.scratchedBy.toString()
+  };
+  
+  io.to(gender).emit('cardUpdate', payload);
+};
+
+// Export for use in routes
+app.set('io', io);
+app.set('emitCardUpdate', emitCardUpdate);
+
+// Make sure server.listen is called
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;

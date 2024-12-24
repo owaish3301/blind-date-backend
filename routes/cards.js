@@ -96,11 +96,6 @@ router.post('/scratch/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if user has completed questionnaire
-    if (!user.questionnaire?.gender) {
-      return res.status(400).json({ message: 'Please complete your profile first' });
-    }
-
     const card = await Card.findById(req.params.id);
     if (!card) {
       return res.status(404).json({ message: 'Card not found' });
@@ -116,39 +111,53 @@ router.post('/scratch/:id', auth, async (req, res) => {
 
     // Check if already scratched by this user
     if (card[scratchField].scratchedBy?.equals(user._id)) {
-      return res.status(400).json({ 
-        message: 'You have already scratched this card',
-        code: card.code // Return code if already scratched
+      return res.json({ 
+        code: card.code,
+        matched: card.matched,
+        alreadyScratched: true
       });
     }
 
-    // Update scratch info
-    card[scratchField] = {
-      scratchedBy: user._id,
-      scratchedAt: new Date()
-    };
+    // Update scratch info if not already scratched
+    if (!card[scratchField].scratchedBy) {
+      card[scratchField] = {
+        scratchedBy: user._id,
+        scratchedAt: new Date()
+      };
 
-    // Check for match
-    let matchedUser = null;
-    if (card[otherScratchField].scratchedBy) {
-      card.matched = true;
-      matchedUser = await User.findById(card[otherScratchField].scratchedBy)
-        .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
+      // Emit update to others of same gender
+      const emitCardUpdate = req.app.get('emitCardUpdate');
+      if (emitCardUpdate) {
+        emitCardUpdate(card._id.toString(), userGender, {
+          isLocked: true,
+          scratchedBy: user._id
+        });
+      }
+
+      // Check for match
+      let matchedUser = null;
+      if (card[otherScratchField].scratchedBy) {
+        card.matched = true;
+        matchedUser = await User.findById(card[otherScratchField].scratchedBy)
+          .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
+      }
+
+      await card.save();
+
+      return res.json({
+        code: card.code,
+        matched: card.matched,
+        matchedUser: matchedUser ? {
+          name: matchedUser.name,
+          age: matchedUser.questionnaire.age,
+          course: matchedUser.questionnaire.course,
+          year: matchedUser.questionnaire.year,
+          interests: matchedUser.questionnaire.interests
+        } : null
+      });
     }
 
-    await card.save();
-
-    res.json({
-      code: card.code,
-      matched: card.matched,
-      matchedUser: matchedUser ? {
-        name: matchedUser.name,
-        age: matchedUser.questionnaire.age,
-        course: matchedUser.questionnaire.course,
-        year: matchedUser.questionnaire.year,
-        interests: matchedUser.questionnaire.interests
-      } : null
-    });
+    return res.status(400).json({ message: 'Card already scratched by someone else' });
 
   } catch (err) {
     console.error('Error scratching card:', err);
