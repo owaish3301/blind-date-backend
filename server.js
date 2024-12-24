@@ -9,6 +9,7 @@ const { Server } = require('socket.io');
 const http = require('http');
 
 const app = express();
+const server = http.createServer(app);
 
 // Connect Database
 connectDB();
@@ -17,7 +18,7 @@ connectDB();
 app.use(express.json());
 
 // CORS configuration
-app.use(cors({
+const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? 'https://blind-date-seven.vercel.app'
     : 'http://localhost:5173',
@@ -25,7 +26,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
   exposedHeaders: ['x-auth-token']
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Session configuration with MongoDB store
 app.use(session({
@@ -51,24 +54,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
 
-// Socket.IO setup
-const server = http.createServer(app);
+// Socket.IO setup with production settings
 const io = new Server(server, {
-  cors: {
-    origin: ['https://blind-date-seven.vercel.app'],
-    methods: ['GET', 'POST'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
-  },
+  cors: corsOptions,
   path: '/socket.io',
-  transports: ['polling', 'websocket'],
-  allowEIO3: true,
+  transports: ['websocket', 'polling'],
   pingTimeout: 60000,
   pingInterval: 25000,
+  allowEIO3: true,
   upgrade: true,
   cookie: {
     name: 'io',
@@ -77,6 +79,14 @@ const io = new Server(server, {
     sameSite: 'none',
     secure: true
   }
+});
+
+// Error handling for WebSocket
+io.engine.on("connection_error", (err) => {
+  console.log(err.req);      // the request object
+  console.log(err.code);     // the error code
+  console.log(err.message);  // the error message
+  console.log(err.context);  // some additional error context
 });
 
 // Socket.IO connection handling
