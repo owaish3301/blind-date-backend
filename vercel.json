@@ -9,8 +9,7 @@
   "routes": [
     {
       "src": "/socket.io/(.*)",
-      "dest": "https://blind-date-backend.vercel.app/socket.io/$1",
-      "methods": ["GET", "POST", "OPTIONS"],
+      "dest": "/server.js",
       "headers": {
         "Access-Control-Allow-Origin": "https://blind-date-seven.vercel.app",
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
@@ -25,6 +24,26 @@
     {
       "src": "/(.*)",
       "dest": "/server.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://blind-date-seven.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, x-auth-token"
+        }
+      ]
     }
   ]
 }

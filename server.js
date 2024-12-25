@@ -69,17 +69,21 @@ const io = new Server(server, {
     origin: process.env.NODE_ENV === 'production' 
       ? 'https://blind-date-seven.vercel.app'
       : 'http://localhost:5173',
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+    allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
   },
-  path: '/socket.io/',
-  transports: ['polling', 'websocket'],
-  pingTimeout: 60000,
-  pingInterval: 25000,
   allowEIO3: true,
-  upgradeTimeout: 30000,
-  maxHttpBufferSize: 1e8
+  path: '/socket.io/',
+  transports: ['polling'],
+  pingInterval: 20000,
+  pingTimeout: 5000,
+  cookie: {
+    name: "io",
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
+  }
 });
 
 // Error handling for WebSocket
