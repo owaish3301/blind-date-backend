@@ -9,19 +9,24 @@
   "routes": [
     {
       "src": "/socket.io/(.*)",
-      "dest": "/server.js"
+      "dest": "server.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://blind-date-seven.vercel.app",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-auth-token",
+        "Access-Control-Allow-Credentials": "true"
+      }
     },
     {
       "src": "/api/(.*)",
-      "dest": "/server.js"
+      "dest": "server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/server.js"
+      "dest": "server.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
   }
 }
- 

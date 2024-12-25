@@ -65,13 +65,18 @@ app.use('/api/cards', require('./routes/cards'));
 
 // Socket.IO setup with production settings
 const io = new Server(server, {
-  cors: corsOptions,
-  path: '/socket.io',
-  transports: ['websocket', 'polling'],
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://blind-date-seven.vercel.app']
+      : ['http://localhost:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  path: '/socket.io/',
+  transports: ['polling', 'websocket'], // Changed order to try polling first
   pingTimeout: 60000,
   pingInterval: 25000,
   allowEIO3: true,
-  upgrade: true,
   cookie: {
     name: 'io',
     path: '/',
