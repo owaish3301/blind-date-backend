@@ -67,23 +67,19 @@ app.use('/api/cards', require('./routes/cards'));
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://blind-date-seven.vercel.app']
-      : ['http://localhost:5173'],
-    methods: ['GET', 'POST'],
-    credentials: true
+      ? 'https://blind-date-seven.vercel.app'
+      : 'http://localhost:5173',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
   },
   path: '/socket.io/',
-  transports: ['polling', 'websocket'], // Changed order to try polling first
+  transports: ['polling', 'websocket'],
   pingTimeout: 60000,
   pingInterval: 25000,
   allowEIO3: true,
-  cookie: {
-    name: 'io',
-    path: '/',
-    httpOnly: true,
-    sameSite: 'none',
-    secure: true
-  }
+  upgradeTimeout: 30000,
+  maxHttpBufferSize: 1e8
 });
 
 // Error handling for WebSocket
