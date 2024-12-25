@@ -84,10 +84,17 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+
   socket.on("join", (userData) => {
     if (userData?.gender) {
       socket.join(userData.gender);
+      console.log(`User joined ${userData.gender} room`);
     }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
   });
 });
 
