@@ -5,8 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "init-cards": "node scripts/initializeCards.js",
-    "vercel-build": "echo 'Building for Vercel deployment'"
+    "init-cards": "node scripts/initializeCards.js"
   },
   "keywords": [],
   "author": "",
