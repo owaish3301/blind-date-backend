@@ -63,9 +63,9 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
 
-// Socket.IO setup with production settings
+// Socket.IO setup
 const io = new Server(server, {
-  path: "/socket.io",
+  path: "/socket.io/",
   cors: {
     origin:
       process.env.NODE_ENV === "production"
@@ -75,12 +75,11 @@ const io = new Server(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
   },
-  transports: ["polling", "websocket"],
+  transports: ["polling"],
   allowEIO3: true,
   pingInterval: 10000,
   pingTimeout: 5000,
 });
-
 
 // Error handling for WebSocket
 io.engine.on("connection_error", (err) => {
