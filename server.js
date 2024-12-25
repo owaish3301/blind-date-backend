@@ -19,14 +19,14 @@ app.use(express.json());
 
 // CORS configuration
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? "https://blind-date-seven.vercel.app"
-      : "http://localhost:5173",
+  origin: [
+    'https://blind-date-seven.vercel.app',
+    'http://localhost:5173'
+  ],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
-  exposedHeaders: ["x-auth-token"],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
+  exposedHeaders: ['x-auth-token']
 };
 
 app.use(cors(corsOptions));
@@ -72,15 +72,17 @@ app.use("/api/cards", require("./routes/cards"));
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://blind-date-seven.vercel.app"
-        : "http://localhost:5173",
-    methods: ["GET", "POST"],
+    origin: [
+      'https://blind-date-seven.vercel.app',
+      'http://localhost:5173'
+    ],
+    methods: ['GET', 'POST'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
   },
-  path: "/socket.io",
-  transports: ["polling"],
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'], // Add websocket transport
+  allowEIO3: true // Enable Engine.IO v3 compatibility
 });
 
 io.on("connection", (socket) => {
