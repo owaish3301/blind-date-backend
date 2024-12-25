@@ -8,16 +8,16 @@
   ],
   "rewrites": [
     {
-      "source": "/socket.io/:match*",
-      "destination": "server.js"
+      "source": "/socket.io/(.*)",
+      "destination": "/server.js"
     },
     {
       "source": "/api/:path*",
-      "destination": "server.js"
+      "destination": "/server.js"
     },
     {
       "source": "/(.*)",
-      "destination": "server.js"
+      "destination": "/server.js"
     }
   ]
 }
