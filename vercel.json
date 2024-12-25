@@ -8,11 +8,11 @@
   ],
   "rewrites": [
     {
-      "source": "/socket.io/(.*)",
+      "source": "/socket.io/:path*",
       "destination": "/server.js"
     },
     {
-      "source": "/api/(.*)",
+      "source": "/api/:path*",
       "destination": "/server.js"
     },
     {
@@ -24,33 +24,21 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
         {
           "key": "Access-Control-Allow-Origin",
           "value": "https://blind-date-seven.vercel.app"
         },
         {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET,POST,PUT,DELETE,OPTIONS"
+          "value": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
         },
         {
           "key": "Access-Control-Allow-Headers",
           "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, x-auth-token"
-        }
-      ]
-    },
-    {
-      "source": "/socket.io/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://blind-date-seven.vercel.app"
-        },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, x-auth-token"
         }
       ]
     }

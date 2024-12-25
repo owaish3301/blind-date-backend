@@ -65,26 +65,22 @@ app.use('/api/cards', require('./routes/cards'));
 
 // Socket.IO setup with production settings
 const io = new Server(server, {
+  path: "/socket.io",
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? 'https://blind-date-seven.vercel.app'
-      : 'http://localhost:5173',
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "https://blind-date-seven.vercel.app"
+        : "http://localhost:5173",
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"]
+    allowedHeaders: ["Content-Type", "Authorization", "x-auth-token"],
   },
+  transports: ["polling", "websocket"],
   allowEIO3: true,
-  path: '/socket.io/',
-  transports: ['polling'],
-  pingInterval: 20000,
+  pingInterval: 10000,
   pingTimeout: 5000,
-  cookie: {
-    name: "io",
-    httpOnly: true,
-    sameSite: "none",
-    secure: true
-  }
 });
+
 
 // Error handling for WebSocket
 io.engine.on("connection_error", (err) => {
@@ -95,23 +91,28 @@ io.engine.on("connection_error", (err) => {
 });
 
 // Socket.IO connection handling
-io.on('connection', (socket) => {
-  socket.on('join', (userData) => {
+io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+
+  socket.on("join", (userData) => {
     if (userData?.gender) {
       socket.join(userData.gender);
+      console.log(`User joined ${userData.gender} room`);
     }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
   });
 });
 
 // Update the card scratch route to emit updates
 const emitCardUpdate = (cardId, gender, data) => {
-  const payload = {
+  io.to(gender).emit("cardUpdate", {
     cardId: cardId.toString(),
     isLocked: true,
-    scratchedBy: data.scratchedBy.toString()
-  };
-  
-  io.to(gender).emit('cardUpdate', payload);
+    scratchedBy: data.scratchedBy.toString(),
+  });
 };
 
 // Export for use in routes
