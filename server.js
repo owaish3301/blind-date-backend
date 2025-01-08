@@ -5,8 +5,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
 const path = require('path');
-const { Server } = require('socket.io');
-const http = require('http');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
@@ -55,53 +54,39 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
 
-// Socket.IO setup
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? 'https://blind-date-seven.vercel.app'
-      : 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
-  path: '/socket.io' // Explicitly set the path
-});
+// Supabase setup
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('join', (userData) => {
-    if (userData?.gender) {
-      console.log(`User joined ${userData.gender} room:`, socket.id);
-      socket.join(userData.gender);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
-// Update the card scratch route to emit updates
-const emitCardUpdate = (cardId, gender, data) => {
-  const payload = {
-    cardId: cardId.toString(),
-    isLocked: true,
-    scratchedBy: data.scratchedBy.toString()
-  };
-  
-  console.log(`Emitting to ${gender} room:`, payload);
-  io.to(gender).emit('cardUpdate', payload);
+// Update the card scratch route to emit updates using Supabase broadcast
+const emitCardUpdate = async (cardId, gender, data) => {
+  try{
+    const payload = {
+      cardId: cardId.toString(),
+      isLocked: true,
+      scratchedBy: data.scratchedBy.toString()
+    };
+    
+    await supabase
+      .channel('card-updates')
+      .send({
+        type: 'broadcast',
+        event: 'card-update',
+        payload : payload
+      });
+    console.log("Broadcast sent:", payload);
+  } catch (error) {
+    console.error("Error broadcasting update:", error);
+  }
 };
 
 // Export for use in routes
-app.set('io', io);
 app.set('emitCardUpdate', emitCardUpdate);
 
 // Make sure server.listen is called
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;
