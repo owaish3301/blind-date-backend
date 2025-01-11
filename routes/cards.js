@@ -3,6 +3,7 @@ const Card = require('../models/Card');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const crypto = require('crypto');
+const Notification = require('../models/Notification');
 
 // Generate unique codes
 const generateUniqueCode = () => {
@@ -140,6 +141,43 @@ router.post('/scratch/:id', auth, async (req, res) => {
         card.matched = true;
         matchedUser = await User.findById(card[otherScratchField].scratchedBy)
           .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
+
+        // Create notifications for both users
+        await Promise.all([
+          // Notification for current user
+          new Notification({
+            userId: req.user.id,
+            type: 'match',
+            message: `You matched with ${matchedUser.name}!`,
+            metadata: {
+              matchedUser: {
+                name: matchedUser.name,
+                age: matchedUser.questionnaire.age,
+                course: matchedUser.questionnaire.course,
+                year: matchedUser.questionnaire.year,
+                interests: matchedUser.questionnaire.interests
+              },
+              code: card.code
+            }
+          }).save(),
+
+          // Notification for matched user
+          new Notification({
+            userId: card[otherScratchField].scratchedBy,
+            type: 'match',
+            message: `You matched with ${user.name}!`,
+            metadata: {
+              matchedUser: {
+                name: user.name,
+                age: user.questionnaire.age,
+                course: user.questionnaire.course,
+                year: user.questionnaire.year,
+                interests: user.questionnaire.interests
+              },
+              code: card.code
+            }
+          }).save()
+        ]);
       }
 
       await card.save();

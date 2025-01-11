@@ -53,6 +53,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cards', require('./routes/cards'));
+app.use("/api/notifications", require("./routes/notification"));
 
 // Supabase setup
 const supabase = createClient(
@@ -76,7 +77,6 @@ const emitCardUpdate = async (cardId, gender, data) => {
         event: 'card-update',
         payload : payload
       });
-    console.log("Broadcast sent:", payload);
   } catch (error) {
     console.error("Error broadcasting update:", error);
   }
@@ -85,7 +85,7 @@ const emitCardUpdate = async (cardId, gender, data) => {
 // Export for use in routes
 app.set('emitCardUpdate', emitCardUpdate);
 
-// Make sure server.listen is called
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
