@@ -1,16 +1,33 @@
-const router = require('express').Router();
-const Notification = require('../models/Notification');
-const auth = require('../middleware/auth');
+const router = require("express").Router();
+const Notification = require("../models/Notification");
+const auth = require("../middleware/auth");
 
+// Add a new notification
 router.post("/", auth, async (req, res) => {
   try {
-    const notification = new Notification({
-      userId: req.user.id,
+    const notification = {
       type: req.body.type,
       message: req.body.message,
       metadata: req.body.metadata,
-    });
-    await notification.save();
+      createdAt: new Date(),
+    };
+
+    const userNotifications = await Notification.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        $push: {
+          notifications: {
+            $each: [notification],
+            $position: 0, // Add to start of array
+          },
+        },
+      },
+      {
+        new: true,
+        upsert: true, // Create if doesn't exist
+      }
+    );
+
     res.json(notification);
   } catch (err) {
     console.error("Error creating notification:", err);
@@ -21,39 +38,50 @@ router.post("/", auth, async (req, res) => {
 // Get user notifications
 router.get("/", auth, async (req, res) => {
   try {
-    const notifications = await Notification.find({ userId: req.user.id }).sort(
-      { createdAt: -1 }
-    );
-    res.json(notifications);
+    const userNotifications = await Notification.findOne({
+      userId: req.user.id,
+    });
+    res.json(userNotifications?.notifications || []);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
 // Mark all as read
-router.put('/mark-all-read', auth, async (req, res) => {
+router.put("/mark-all-read", auth, async (req, res) => {
   try {
-    await Notification.updateMany(
+    await Notification.findOneAndUpdate(
       { userId: req.user.id },
-      { $set: { read: true } }
+      { "notifications.$[].read": true }
     );
-    res.json({ message: 'All notifications marked as read' });
+    res.json({ message: "All notifications marked as read" });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // Mark single notification as read
-router.put('/:id/read', auth, async (req, res) => {
+router.put("/:notificationId/read", auth, async (req, res) => {
   try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      { $set: { read: true } },
+    const result = await Notification.findOneAndUpdate(
+      {
+        userId: req.user.id,
+        "notifications._id": req.params.notificationId,
+      },
+      {
+        $set: {
+          "notifications.$.read": true,
+        },
+      },
       { new: true }
+    );
+
+    const notification = result.notifications.find(
+      (n) => n._id.toString() === req.params.notificationId
     );
     res.json(notification);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 

@@ -1,12 +1,6 @@
 const mongoose = require('mongoose');
 
-const NotificationSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true // Add index for better query performance
-  },
+const NotificationItemSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ['match', 'card', 'system'],
@@ -18,8 +12,7 @@ const NotificationSchema = new mongoose.Schema({
   },
   read: {
     type: Boolean,
-    default: false,
-    index: true // Add index for better query performance
+    default: false
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed,
@@ -27,12 +20,18 @@ const NotificationSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now,
-    index: true // Add index for better query performance
+    default: Date.now
   }
 });
 
-// Add compound index for common queries
-NotificationSchema.index({ userId: 1, createdAt: -1 });
+const NotificationSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true // One document per user
+  },
+  notifications: [NotificationItemSchema]
+});
 
 module.exports = mongoose.model('Notification', NotificationSchema);

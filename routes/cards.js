@@ -142,41 +142,61 @@ router.post('/scratch/:id', auth, async (req, res) => {
         matchedUser = await User.findById(card[otherScratchField].scratchedBy)
           .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
 
-        // Create notifications for both users
+        // Create notifications for both users using findOneAndUpdate
         await Promise.all([
           // Notification for current user
-          new Notification({
-            userId: req.user.id,
-            type: 'match',
-            message: `You matched with ${matchedUser.name}!`,
-            metadata: {
-              matchedUser: {
-                name: matchedUser.name,
-                age: matchedUser.questionnaire.age,
-                course: matchedUser.questionnaire.course,
-                year: matchedUser.questionnaire.year,
-                interests: matchedUser.questionnaire.interests
-              },
-              code: card.code
-            }
-          }).save(),
+          Notification.findOneAndUpdate(
+            { userId: req.user.id },
+            {
+              $push: {
+                notifications: {
+                  $each: [{
+                    type: 'match',
+                    message: `You matched with ${matchedUser.name}!`,
+                    metadata: {
+                      matchedUser: {
+                        name: matchedUser.name,
+                        age: matchedUser.questionnaire.age,
+                        course: matchedUser.questionnaire.course,
+                        year: matchedUser.questionnaire.year,
+                        interests: matchedUser.questionnaire.interests
+                      },
+                      code: card.code
+                    }
+                  }],
+                  $position: 0
+                }
+              }
+            },
+            { upsert: true, new: true }
+          ),
 
           // Notification for matched user
-          new Notification({
-            userId: card[otherScratchField].scratchedBy,
-            type: 'match',
-            message: `You matched with ${user.name}!`,
-            metadata: {
-              matchedUser: {
-                name: user.name,
-                age: user.questionnaire.age,
-                course: user.questionnaire.course,
-                year: user.questionnaire.year,
-                interests: user.questionnaire.interests
-              },
-              code: card.code
-            }
-          }).save()
+          Notification.findOneAndUpdate(
+            { userId: card[otherScratchField].scratchedBy },
+            {
+              $push: {
+                notifications: {
+                  $each: [{
+                    type: 'match',
+                    message: `You matched with ${user.name}!`,
+                    metadata: {
+                      matchedUser: {
+                        name: user.name,
+                        age: user.questionnaire.age,
+                        course: user.questionnaire.course,
+                        year: user.questionnaire.year,
+                        interests: user.questionnaire.interests
+                      },
+                      code: card.code
+                    }
+                  }],
+                  $position: 0
+                }
+              }
+            },
+            { upsert: true, new: true }
+          )
         ]);
       }
 

@@ -20,7 +20,7 @@ const initializeCards = async () => {
     console.log('Cleared existing cards');
     
     const uniqueCodes = new Set();
-    const totalCodes = 10;
+    const totalCodes = 3;
     
     while (uniqueCodes.size < totalCodes) {
       const code = generateCode();
