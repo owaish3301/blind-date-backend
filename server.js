@@ -62,11 +62,12 @@ const supabase = createClient(
 );
 
 // Update the card scratch route to emit updates using Supabase broadcast
-const emitCardUpdate = async (cardId, gender, data) => {
-  try{
+const emitCardUpdate = async (cardId, scratcherGender, data) => {
+  try {
     const payload = {
       cardId: cardId.toString(),
       isLocked: true,
+      scratcherGender: scratcherGender,
       scratchedBy: data.scratchedBy.toString()
     };
     
@@ -75,7 +76,7 @@ const emitCardUpdate = async (cardId, gender, data) => {
       .send({
         type: 'broadcast',
         event: 'card-update',
-        payload : payload
+        payload: payload
       });
   } catch (error) {
     console.error("Error broadcasting update:", error);

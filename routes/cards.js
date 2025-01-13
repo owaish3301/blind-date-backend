@@ -102,10 +102,6 @@ router.post('/scratch/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Card not found' });
     }
 
-    if (!card.isActive) {
-      return res.status(400).json({ message: 'Card is not active' });
-    }
-
     const userGender = user.questionnaire.gender;
     const scratchField = userGender === 'Male' ? 'maleScratch' : 'femaleScratch';
     const otherScratchField = userGender === 'Male' ? 'femaleScratch' : 'maleScratch';
@@ -126,7 +122,7 @@ router.post('/scratch/:id', auth, async (req, res) => {
         scratchedAt: new Date()
       };
 
-      // Emit update to others of same gender
+      // Emit update with gender information
       const emitCardUpdate = req.app.get('emitCardUpdate');
       if (emitCardUpdate) {
         emitCardUpdate(card._id.toString(), userGender, {
