@@ -4,6 +4,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const crypto = require('crypto');
 const Notification = require('../models/Notification');
+const supabase = require('../supabase'); 
 
 // Generate unique codes
 const generateUniqueCode = () => {
@@ -138,62 +139,88 @@ router.post('/scratch/:id', auth, async (req, res) => {
         matchedUser = await User.findById(card[otherScratchField].scratchedBy)
           .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
 
-        // Create notifications for both users using findOneAndUpdate
-        await Promise.all([
-          // Notification for current user
-          Notification.findOneAndUpdate(
-            { userId: req.user.id },
-            {
-              $push: {
-                notifications: {
-                  $each: [{
-                    type: 'match',
-                    message: `You matched with ${matchedUser.name}!`,
-                    metadata: {
-                      matchedUser: {
-                        name: matchedUser.name,
-                        age: matchedUser.questionnaire.age,
-                        course: matchedUser.questionnaire.course,
-                        year: matchedUser.questionnaire.year,
-                        interests: matchedUser.questionnaire.interests
-                      },
-                      code: card.code
-                    }
-                  }],
-                  $position: 0
-                }
-              }
+        // Create notifications
+        const notificationData = {
+          type: 'match',
+          message: `You matched with ${matchedUser.name}!`,
+          metadata: {
+            matchedUser: {
+              name: matchedUser.name,
+              age: matchedUser.questionnaire.age,
+              course: matchedUser.questionnaire.course,
+              year: matchedUser.questionnaire.year,
+              interests: matchedUser.questionnaire.interests
             },
-            { upsert: true, new: true }
-          ),
+            code: card.code
+          }
+        };
 
-          // Notification for matched user
-          Notification.findOneAndUpdate(
-            { userId: card[otherScratchField].scratchedBy },
-            {
-              $push: {
-                notifications: {
-                  $each: [{
-                    type: 'match',
-                    message: `You matched with ${user.name}!`,
-                    metadata: {
-                      matchedUser: {
-                        name: user.name,
-                        age: user.questionnaire.age,
-                        course: user.questionnaire.course,
-                        year: user.questionnaire.year,
-                        interests: user.questionnaire.interests
-                      },
-                      code: card.code
-                    }
-                  }],
-                  $position: 0
+        const matchedUserNotificationData = {
+          ...notificationData,
+          message: `You matched with ${user.name}!`,
+          metadata: {
+            ...notificationData.metadata,
+            matchedUser: {
+              name: user.name,
+              age: user.questionnaire.age,
+              course: user.questionnaire.course,
+              year: user.questionnaire.year,
+              interests: user.questionnaire.interests
+            }
+          }
+        };
+
+        try {
+          // Create notifications in database
+          const [currentUserNotif, matchedUserNotif] = await Promise.all([
+            Notification.findOneAndUpdate(
+              { userId: req.user.id },
+              {
+                $push: {
+                  notifications: {
+                    $each: [notificationData],
+                    $position: 0
+                  }
                 }
+              },
+              { upsert: true, new: true }
+            ),
+            Notification.findOneAndUpdate(
+              { userId: card[otherScratchField].scratchedBy },
+              {
+                $push: {
+                  notifications: {
+                    $each: [matchedUserNotificationData],
+                    $position: 0
+                  }
+                }
+              },
+              { upsert: true, new: true }
+            )
+          ]);
+
+          // Send real-time notifications through Supabase
+          await Promise.all([
+            supabase.channel('notification-updates').send({
+              type: 'broadcast',
+              event: 'notification',
+              payload: {
+                userId: req.user.id.toString(),
+                notification: currentUserNotif.notifications[0]
               }
-            },
-            { upsert: true, new: true }
-          )
-        ]);
+            }),
+            supabase.channel('notification-updates').send({
+              type: 'broadcast',
+              event: 'notification',
+              payload: {
+                userId: card[otherScratchField].scratchedBy.toString(),
+                notification: matchedUserNotif.notifications[0]
+              }
+            })
+          ]);
+        } catch (err) {
+          console.error('Error handling notifications:', err);
+        }
       }
 
       await card.save();

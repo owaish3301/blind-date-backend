@@ -61,6 +61,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const notificationChannel = supabase.channel("notification-updates");
+notificationChannel.subscribe(status => {
+  console.log("Notification channel status:", status);
+});
+
+const cardChannel = supabase.channel("card-updates");
+cardChannel.subscribe((status) => {
+  console.log("Card channel status:", status);
+});
+
 // Update the card scratch route to emit updates using Supabase broadcast
 const emitCardUpdate = async (cardId, scratcherGender, data) => {
   try {
@@ -71,13 +81,11 @@ const emitCardUpdate = async (cardId, scratcherGender, data) => {
       scratchedBy: data.scratchedBy.toString()
     };
     
-    await supabase
-      .channel('card-updates')
-      .send({
-        type: 'broadcast',
-        event: 'card-update',
-        payload: payload
-      });
+    await cardChannel.send({
+      type: "broadcast",
+      event: "card-update",
+      payload: payload,
+    });
   } catch (error) {
     console.error("Error broadcasting update:", error);
   }

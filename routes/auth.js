@@ -76,7 +76,10 @@ router.post('/signin', async (req, res) => {
       }
     );
 
-    res.json({ token });
+    res.json({
+      token,
+      userId: user._id.toString(), // Add this line
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
