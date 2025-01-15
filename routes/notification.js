@@ -61,27 +61,44 @@ router.put("/mark-all-read", auth, async (req, res) => {
 });
 
 // Mark single notification as read
+// Mark single notification as read
 router.put("/:notificationId/read", auth, async (req, res) => {
   try {
+    const { notificationId } = req.params;
+    
+    if (!notificationId) {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
     const result = await Notification.findOneAndUpdate(
       {
         userId: req.user.id,
-        "notifications._id": req.params.notificationId,
+        "notifications._id": notificationId
       },
       {
         $set: {
-          "notifications.$.read": true,
-        },
+          "notifications.$.read": true
+        }
       },
       { new: true }
     );
 
+    if (!result) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
     const notification = result.notifications.find(
-      (n) => n._id.toString() === req.params.notificationId
+      (n) => n._id.toString() === notificationId
     );
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
     res.json(notification);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error('Error marking notification as read:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
