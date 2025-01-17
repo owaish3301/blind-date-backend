@@ -33,7 +33,7 @@ router.post('/signup', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(decryptedPassword, salt);
 
-    await user.save();
+    const savedUser = await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
@@ -41,7 +41,7 @@ router.post('/signup', async (req, res) => {
 
     res.json({
       token,
-      userId: user._id.toString(), // Add this line
+      userId: savedUser._id.toString(), // Add this line
     });
   } catch (err) {
     console.error(err);
