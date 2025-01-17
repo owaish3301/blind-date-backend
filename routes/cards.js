@@ -137,14 +137,50 @@ router.post('/scratch/:id', auth, async (req, res) => {
       if (card[otherScratchField].scratchedBy) {
         card.matched = true;
         matchedUser = await User.findById(card[otherScratchField].scratchedBy)
-          .select('name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
+          .select('_id name questionnaire.age questionnaire.course questionnaire.year questionnaire.interests');
 
+        // Create chat relationship in Supabase
+        try{
+          // Check if relationship already exists
+          const { data: existingChat } = await supabase
+            .from('chat_relationships')
+            .select()
+            .or(`and(user1_id.eq.${req.user.id},user2_id.eq.${matchedUser._id}),and(user1_id.eq.${matchedUser._id},user2_id.eq.${req.user.id})`)
+            .single();
+
+          if (!existingChat) {
+          // Insert new chat relationship
+          const { data, error } = await supabase
+            .from('chat_relationships')
+            .insert([
+              { 
+                user1_id: req.user.id,
+                user2_id: matchedUser._id.toString()
+              }
+            ]);
+
+            if (error) throw error;
+
+            // Broadcast new chat relationship
+            await supabase.channel('chat-updates').send({
+              type: 'broadcast',
+              event: 'new-chat',
+              payload: {
+                user1_id: req.user.id,
+                user2_id: matchedUser._id.toString()
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Error creating chat relationship:', err);
+        }
         // Create notifications
         const notificationData = {
           type: 'match',
           message: `You matched with ${matchedUser.name}!`,
           metadata: {
             matchedUser: {
+              _id: matchedUser._id,
               name: matchedUser.name,
               age: matchedUser.questionnaire.age,
               course: matchedUser.questionnaire.course,
