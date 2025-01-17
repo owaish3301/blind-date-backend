@@ -108,6 +108,22 @@ router.get('/verify', async (req, res) => {
   }
 });
 
+router.get("/user/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select(
+      "name questionnaire"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Add questionnaire route
 router.post('/questionnaire', auth, async (req, res) => {
   try {
