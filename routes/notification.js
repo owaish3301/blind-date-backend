@@ -61,7 +61,6 @@ router.put("/mark-all-read", auth, async (req, res) => {
 });
 
 // Mark single notification as read
-// Mark single notification as read
 router.put("/:notificationId/read", auth, async (req, res) => {
   try {
     const { notificationId } = req.params;
