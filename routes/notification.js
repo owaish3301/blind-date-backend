@@ -27,8 +27,8 @@ router.post("/", auth, async (req, res) => {
         upsert: true, // Create if doesn't exist
       }
     );
-
-    res.json(notification);
+    const newNotification = userNotifications.notifications[0];
+    res.json(newNotification);
   } catch (err) {
     console.error("Error creating notification:", err);
     res.status(500).json({ message: "Server error" });
